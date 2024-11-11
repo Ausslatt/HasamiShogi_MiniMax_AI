@@ -1,7 +1,15 @@
 
 class ShogiGame:
 
+
+
     def __init__(self):
+        """
+        A 2D list representing the game board. The first element of each row is the row label, and the first element of each column is the column label. Game pieces are
+        represented by 'R' for red pieces and 'B' for black pieces. Empty squares are denoted by '.'. Turn counter is initialized to 0, even numbers indicate it is Black's turn and odd is Red.
+        A space on the board is represented by its row letter and column number index, space "a1" is the first red piece at the top left of a new board. A board's space_map allows easy conversion from alphabetical
+        row labels to the corresponding index.
+        """
         self._game_state = 'UNFINISHED'
         self._turn = 0
         self._num_of_red_captured = 0
@@ -17,9 +25,13 @@ class ShogiGame:
                        ['g', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
                        ['h', '.', '.', '.', '.', '.', '.', '.', '.', '.'],
                        ['i', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B', 'B']]
+        self.space_map = {'a':1, 'b':2, 'c':3, 'd':4, 'e':5, 'f':6, 'g':7, 'h':8, 'i':9}
+        
+     
+
 
     def show_board(self):
-        for i in self._board:
+        for i in self._board: # prints a board to terminal.
             print(*i)
 
     def get_num_captured_pieces(self, color):
@@ -33,10 +45,10 @@ class ShogiGame:
 
     def get_active_player(self):
         if self._turn % 2 == 0:
-            return 'BLACK'
+            return 'B'
 
-        elif self._turn % 2 != 0:
-            return 'RED'
+        else:
+            return 'R'
 
     def set_game_state(self, state):
         self._game_state = state
@@ -56,90 +68,146 @@ class ShogiGame:
     def inc_black_captured(self):
         self._num_of_black_captured += 1
 
-    def get_square_occupant(self, square):
-        for i in self._board:
-            if i[0] == square[0]:
-                if i[int(square[1])] == 'R':
-                    return "RED"
-
-                elif i[int(square[1])] == 'B':
-                    return "BLACK"
-                else:
-                    return '.'
-
-    def set_square_occupant(self, square, piece=None):
-        if piece is None:
-            piece = '.'
-
-        for i in self._board:
-            if i[0] == square[0]:
-                i[int(square[1])] = piece
-
-    def _move_piece(self, origin, dest, piece=None):
-        if self.get_square_occupant(origin) == 'RED':
-            piece = 'R'
-
-        if self.get_square_occupant(origin) == 'BLACK':
-            piece = 'B'
-
-        for i in self._board:
-
-            if i[0] == dest[0]:
-                i[int(dest[1])] = piece
-
-            if i[0] == origin[0]:
-                i[int(origin[1])] = '.'
-
     def _is_horizontal(self, origin, dest):
         if origin[0] == dest[0]:
             return True
+        else:
+            return False
 
     def _is_vertical(self, origin, dest):
         if origin[1] == dest[1]:
             return True
-
-    def get_horizontal_path(self, origin, dest):
-        if origin[0] == dest[0]:
-            for i in self._board:
-                if i[0] == origin[0] == dest[0]:
-
-                    if int(origin[1]) < int(dest[1]):
-                        path = []
-                        for k in range(int(origin[1]) + 1, int(dest[1]) + 1):
-                            path.append(i[k])
-                        return path
-
-                    elif int(origin[1]) > int(dest[1]):
-                        path = []
-                        for k in range(int(dest[1]), int(origin[1])):
-                            path.append(i[k])
-                        return path
         else:
-            return 'not horizontal'
+            return False
 
-    def get_vertical_path(self, origin, dest):
-        if origin[1] == dest[1]:
-            path = []
-            for i in self._board:
+    def get_square_occupant(self, square):
+        """
+        Returns the piece occupying a square on the board. Validates that the square is on the board.
+        
+        @param square: a string representing a square on the board.
+        @return: the piece occupying the square.
 
-                if origin[0] < dest[0]:
-                    if origin[0] < i[0] <= dest[0]:
-                        path.append(i[int(origin[1])])
+        """
+        if not self.validate_square(square):
+            return None
+        
+        row = self.space_map[square[0]] # row number from our space_map
+        column = int(square[1]) # column number
+        return self._board[row][column]
+        
+    def validate_square(self, square):
+        """
+        Checks if a square is on the board.
 
-                if origin[0] > dest[0]:
-                    if dest[0] <= i[0] < origin[0]:
-                        path.append(i[int(origin[1])])
+        @param square: a string representing a square on the board. 
+        @return: True if the square is on the board, False otherwise.
+
+        """
+        rows = "abcdefghi"
+        columns = "123456789"
+
+        if square[0] not in rows or square[1] not in columns:
+            Print("Square not on board")
+            return False
+        
+        return True
+
+    def set_square_occupant(self, square, piece=None):
+        
+        """
+        Assigns a space on the board to the given piece. Validates that the square is on the board.
+
+        @param square: a string representing a square on the board. 
+        @param piece: a string representing a game piece.
+
+        """
+        if piece is None:
+            piece = '.'
+
+        if not self.validate_square(square):
+            return None
+        
+        row = self.space_map[square[0]]
+        column = int(square[1])
+        self._board[row][column] = piece
+
+    def _move_piece(self, origin, dest):
+
+        """
+        Moves a piece from one square to another. Validates that the path is clear and that the move is either horizontal or vertical.
+
+        @param origin: a string representing the square the piece is moving from.
+        @param dest: a string representing the square the piece is moving to.
+        @param piece: a string representing the piece being moved. If None, the piece at the origin square is moved.
+        """
+        
+        piece = self.get_square_occupant(origin)
+        
+        if piece == '.': # if there is no piece to move
+            print("No piece to move!")
+            return None
+
+        if self.is_path_clear(origin, dest):
+            self.set_square_occupant(origin)
+            self.set_square_occupant(dest, piece)
+
+        else:
+            print("Invalid Path!")
+
+
+    def get_path(self, origin, dest):
+
+        """
+        Returns the path between two squares on the board. Validates that the move is either horizontal or vertical.
+
+        @param origin: a string representing the square the piece is moving from.
+        @param dest: a string representing the square the piece is moving to.
+        @return: a list of the squares between the origin and destination squares.
+
+        """
+        
+        if not (self.validate_square(origin) and self.validate_square(dest)):
+                print("You're attempting to move off the board.")
+
+        row1 = self.space_map[origin[0]]
+        row2 = self.space_map[dest[0]]
+        col1 = int(origin[1])
+        col2 = int(dest[1])
+
+        
+        if self._is_horizontal(origin, dest):
+            
+            path = self._board[self.space_map[origin[0]]][col1 + 1:col2 + 1]
+
             return path
+        
+        elif self._is_vertical(origin, dest):
+            path = [self._board[i][col1] for i in range(row1 + 1, row2 + 1)]
+            return path
+        
         else:
-            return 'not vertical'
+            print("your move is not horizontal or vertical")
+            return None
+
 
     def is_path_clear(self, origin, dest):
-        for i in self.get_vertical_path(origin, dest):
-            if i == 'B' or i == 'R':
-                return False
-        for i in self.get_horizontal_path(origin, dest):
-            if i == 'B' or i == 'R':
-                return False
+
+        """
+        Checks if the path between two squares is clear. 
+        @param origin: a string representing the square the piece is moving from.
+        @param dest: a string representing the square the piece is moving to.
+        @return: True if the path is clear, False otherwise.
+
+        """
+   
+        
+        if self.get_path(origin, dest) is None:
+            return False
+        
+        path = self.get_path(origin, dest)
+
+        if 'B' in path or 'R' in path:
+            return False
         else:
             return True
 
