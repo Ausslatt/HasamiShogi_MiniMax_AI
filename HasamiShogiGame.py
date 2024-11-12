@@ -1,4 +1,7 @@
 
+import random
+import copy
+
 class ShogiGame:
 
 
@@ -320,7 +323,133 @@ class ShogiGame:
             print(self.get_game_state())
 
         self.set_turn()
+        self._active_player = self.get_active_player()
 
         
 
         return True
+
+
+
+
+    def make_random_move(self):
+            """
+            Generates and makes a random move for the active player.
+            """
+            valid_moves = self.get_all_valid_moves(self._active_player)
+            if valid_moves:
+                origin, dest = random.choice(valid_moves)
+                print(f"Random Player {self._active_player} moves from {origin} to {dest}")
+                self.make_move(origin, dest)
+            else:
+                print(f"No valid moves available for {self._active_player}")
+
+    def get_all_valid_moves(self, player):
+        """
+        Finds all valid horizontal and vertical moves for the current player.
+        @param player: 'R' or 'B' representing the current active player.
+        @return: A list of tuples (origin, destination) representing valid moves.
+        """
+        valid_moves = []
+        
+        for row_index in range(1, 10):  # Rows a-i (1 to 9 in indexing)
+            for col_index in range(1, 10):  # Columns 1-9
+                origin = chr(96 + row_index) + str(col_index)  # Convert to board notation
+                if self.get_square_occupant(origin) == player:
+                    
+                    # Find valid horizontal moves (left and right)
+                    for offset in [-1, 1]:  # -1 for left, +1 for right
+                        current_col = col_index + offset
+                        while 1 <= current_col <= 9:
+                            dest = chr(96 + row_index) + str(current_col)
+                            if self.get_square_occupant(dest) == '.':  # Empty square
+                                if self.is_path_clear(self.get_path(origin, dest)):
+                                    valid_moves.append((origin, dest))
+                            else:
+                                break  # Stop searching if path is blocked
+                            current_col += offset
+
+                    # Find valid vertical moves (up and down)
+                    for offset in [-1, 1]:  # -1 for up, +1 for down
+                        current_row = row_index + offset
+                        while 1 <= current_row <= 9:
+                            dest = chr(96 + current_row) + str(col_index)
+                            if self.get_square_occupant(dest) == '.':  # Empty square
+                                if self.is_path_clear(self.get_path(origin, dest)):
+                                    valid_moves.append((origin, dest))
+                            else:
+                                break  # Stop searching if path is blocked
+                            current_row += offset
+
+        return valid_moves
+
+
+
+
+
+    def minimax(self, game_copy, depth, is_maximizing_player):
+        """
+        Implements the Minimax algorithm on a copy of the game object to find the best move.
+        
+        @param game_copy: A copy of the ShogiGame object.
+        @param depth: The depth to which the game tree is explored.
+        @param is_maximizing_player: True if it's the maximizing player's (AI) turn, False if minimizing player's turn.
+        @return: The best score for the current game state.
+        """
+        if depth == 0 or game_copy.get_game_state() != 'UNFINISHED':
+            return game_copy.evaluate_board()
+
+        if is_maximizing_player:
+            max_eval = float('-inf')
+            valid_moves = game_copy.get_all_valid_moves(game_copy._active_player)
+            for move in valid_moves:
+                origin, dest = move
+                # Create a deep copy of the game object
+                new_game_copy = copy.deepcopy(game_copy)
+                # Make the move on the copied game object
+                new_game_copy.make_move(origin, dest)
+                eval = self.minimax(new_game_copy, depth - 1, False)
+                max_eval = max(max_eval, eval)
+            return max_eval
+        else:
+            min_eval = float('inf')
+            opponent = 'R' if game_copy._active_player == 'B' else 'B'
+            valid_moves = game_copy.get_all_valid_moves(opponent)
+            for move in valid_moves:
+                origin, dest = move
+                # Create a deep copy of the game object
+                new_game_copy = copy.deepcopy(game_copy)
+                # Make the move on the copied game object
+                new_game_copy.make_move(origin, dest)
+                eval = self.minimax(new_game_copy, depth - 1, True)
+                min_eval = min(min_eval, eval)
+            return min_eval
+
+    def best_move(self, depth):
+        """
+        Finds the best move for the AI player using the Minimax algorithm with a copied game object.
+        @param depth: The depth to which the game tree is explored.
+        @return: The best move (origin, destination).
+        """
+        best_val = float('-inf')
+        best_move = None
+        valid_moves = self.get_all_valid_moves(self._active_player)
+        for move in valid_moves:
+            origin, dest = move
+            # Create a deep copy of the game object
+            game_copy = copy.deepcopy(self)
+            # Make the move on the copied game object
+            game_copy.make_move(origin, dest)
+            move_val = self.minimax(game_copy, depth - 1, False)
+            if move_val > best_val:
+                best_val = move_val
+                best_move = move
+        return best_move
+
+
+    def evaluate_board(self):
+        """
+        Evaluates the current board state to determine the score.
+        @return: The score of the current board state.
+        """
+        return self.get_num_of_black_captured() - self.get_num_of_red_captured()
