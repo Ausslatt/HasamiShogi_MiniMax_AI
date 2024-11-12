@@ -35,7 +35,7 @@ class ShogiGame:
             print(*i)
 
     def get_num_captured_pieces(self, color):
-        if color == 'RED':
+        if color == 'R':
             return self.get_num_of_red_captured()
         else:
             return self.get_num_of_black_captured()
@@ -111,25 +111,17 @@ class ShogiGame:
             return False
         
         return True
-
+    
     def set_square_occupant(self, square, piece=None):
-        
-        """
-        Assigns a space on the board to the given piece. Validates that the square is on the board.
-
-        @param square: a string representing a square on the board. 
-        @param piece: a string representing a game piece.
-
-        """
         if piece is None:
             piece = '.'
 
-        if not self.validate_square(square):
-            return None
-        
         row = self.space_map[square[0]]
-        column = int(square[1])
-        self._board[row][column] = piece
+        col = int(square[1])
+
+        self._board[row][col] = piece
+
+
 
     def _move_piece(self, origin, dest):
 
@@ -142,17 +134,33 @@ class ShogiGame:
         """
         
         piece = self.get_square_occupant(origin)
+
+        # if self.get_active_player() != self.get_square_occupant(origin):
+        #     return False
+
+        if origin == dest:
+            print("You must move atleast one square.")
+            return None
         
         if piece == '.': # if there is no piece to move
             print("No piece to move!")
             return None
 
-        if self.is_path_clear(origin, dest):
-            self.set_square_occupant(origin)
-            self.set_square_occupant(dest, piece)
+        elif not self.validate_square(origin):
+            Print("Square Not on Board")
+            return None
 
-        else:
-            print("Invalid Path!")
+        elif self.is_path_clear(self.get_path(origin, dest)):
+        
+            dest_row = self.space_map[dest[0]]
+            
+            dest_column = int(dest[1])
+
+            origin_row = self.space_map[origin[0]]
+            origin_column = int(origin[1])
+            self._board[dest_row][dest_column] = piece
+            self._board[origin_row][origin_column] = '.'
+
 
 
     def get_path(self, origin, dest):
@@ -190,305 +198,129 @@ class ShogiGame:
             return None
 
 
-    def is_path_clear(self, origin, dest):
+    def is_path_clear(self, path):
 
         """
         Checks if the path between two squares is clear. 
-        @param origin: a string representing the square the piece is moving from.
-        @param dest: a string representing the square the piece is moving to.
+        @param: Array of chars representing the path.
         @return: True if the path is clear, False otherwise.
 
         """
-   
-        
-        if self.get_path(origin, dest) is None:
-            return False
-        
-        path = self.get_path(origin, dest)
 
         if 'B' in path or 'R' in path:
             return False
         else:
             return True
 
-    def _check_rhs_captures(self, dest):
+    def check_captures(self, dest, direction):
+        """
+        Generalized method to check for captures in a specified direction.
 
-        if self.get_square_occupant(dest) == 'BLACK':
-            capture_seq = [['R', 'B'],
-                           ['R', 'R', 'B'],
-                           ['R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'B']
-                           ]
-        elif self.get_square_occupant(dest) == 'RED':
-            capture_seq = [['B', 'R'],
-                           ['B', 'B', 'R'],
-                           ['B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']
-                           ]
+        @param dest: The destination square where the move ends.
+        @param direction: A tuple (row_offset, col_offset) representing the direction to check for captures.
+        """
+        capture_sequences = {
+            'R': [['B', 'R'], ['B', 'B', 'R'], ['B', 'B', 'B', 'R'], ['B', 'B', 'B', 'B', 'R'], 
+                    ['B', 'B', 'B', 'B', 'B', 'R'], ['B', 'B', 'B', 'B', 'B', 'B', 'R'], 
+                    ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']],
+            'B': [['R', 'B'], ['R', 'R', 'B'], ['R', 'R', 'R', 'B'], ['R', 'R', 'R', 'R', 'B'], 
+                    ['R', 'R', 'R', 'R', 'R', 'B'], ['R', 'R', 'R', 'R', 'R', 'R', 'B'], 
+                    ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'B']]
+        }
 
-        for i in self._board:
-            if i[0] == dest[0]:
-                segment = i[int(dest[1]) + 1::]
-                seq = []
-                for k in segment:
-                    seq.append(k)
-                    for j in capture_seq:
-                        if seq == j:
-                            index = 0
-                            for g in seq:
+        occupant = self.get_square_occupant(dest)
+        if occupant not in ['R', 'B']:
+            return  # No captures to check if no valid occupant
 
-                                if self.get_square_occupant(dest) == 'BLACK':
-                                    if g != 'B' and g != '.':
-                                        index += 1
-                                        i[int(dest[1]) + index] = '.'
-                                        self.inc_red_captured()
+        capture_seq = capture_sequences[occupant]
+        captured_count_increment = self.inc_red_captured if occupant == 'B' else self.inc_black_captured
 
-                                elif self.get_square_occupant(dest) == 'RED':
-                                    if g != 'R' and g != '.':
-                                        index += 1
-                                        i[int(dest[1]) + index] = '.'
-                                        self.inc_black_captured()
+        row, col = self.space_map[dest[0]], int(dest[1])
+        captured_pieces = []
+        seq = []
 
-    def _check_lhs_captures(self, dest, capture_seq=None):
+        # Traverse in the specified direction to check for capture sequences
+        while True:
+            row += direction[0]
+            col += direction[1]
+            if row < 1 or row > 9 or col < 1 or col > 9:
+                break  # Stop if out of bounds
+            current_piece = self._board[row][col]
+            seq.append(current_piece)
 
-        if self.get_square_occupant(dest) == 'BLACK':
-            capture_seq = [['R', 'B'],
-                           ['R', 'R', 'B'],
-                           ['R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'B']
-                           ]
-        elif self.get_square_occupant(dest) == 'RED':
-            capture_seq = [['B', 'R'],
-                           ['B', 'B', 'R'],
-                           ['B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']
-                           ]
+            for capture_pattern in capture_seq:
+                if seq == capture_pattern:
+                    # Capture the pieces in this sequence
+                    for i, piece in enumerate(capture_pattern):
+                        capture_row = row - i * direction[0]
+                        capture_col = col - i * direction[1]
+                        if self._board[capture_row][capture_col] != occupant and self._board[capture_row][capture_col] != '.':
+                            self._board[capture_row][capture_col] = '.'
+                            captured_count_increment()
 
-        for i in self._board:
-            if i[0] == dest[0]:
-                segment = i[:int(dest[1])]
-                segment.reverse()
-                segment.pop()
-                seq = []
-                for k in segment:
-                    seq.append(k)
-                    for j in capture_seq:
-                        if seq == j:
-                            index = 0
-                            for g in seq:
+                    return  # Exit after capturing to avoid further redundant checks
 
-                                if self.get_square_occupant(dest) == 'BLACK':
-                                    if g != 'B' and g != '.':
-                                        index += 1
-                                        i[int(dest[1]) - index] = '.'
-                                        self.inc_red_captured()
+    def check_corner_captures(self, dest):
+        """
+        Generalized method to check for captures at corners based on specific corner sequences.
+        The corners checked are top-left, top-right, bottom-left, and bottom-right.
+        
+        @param dest: The destination square where the move ends.
+        """
+        occupant = self.get_square_occupant(dest)
+        if occupant not in ['R', 'B']:
+            return  # No captures to check if no valid occupant
 
-                                elif self.get_square_occupant(dest) == 'RED':
-                                    if g != 'R' and g != '.':
-                                        index += 1
-                                        i[int(dest[1]) - index] = '.'
-                                        self.inc_black_captured()
+        opponent = 'R' if occupant == 'B' else 'B'
+        captured_count_increment = self.inc_red_captured if occupant == 'B' else self.inc_black_captured
 
-    def _check_up_captures(self, dest):
-        if self.get_square_occupant(dest) == 'BLACK':
-            capture_seq = [['R', 'B'],
-                           ['R', 'R', 'B'],
-                           ['R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'B']
-                           ]
-        elif self.get_square_occupant(dest) == 'RED':
-            capture_seq = [['B', 'R'],
-                           ['B', 'B', 'R'],
-                           ['B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']
-                           ]
-        for i in self._board:
-            if i[0] == dest[0]:
-                segment = [i[int(dest[1])] for i in self._board if i[0] < dest[0]]
-                segment.reverse()
-                segment.pop()
-                seq = []
-                for k in segment:
-                    seq.append(k)
-                    for j in capture_seq:
-                        if seq == j:
-                            row = chr(ord(dest[0]) - 1)
-                            index = dest[1]
-                            sqr = row + index
+        # Define corner positions and their relevant sequences
+        corners = {
+            'topright': [('a8', 'b9', 'a9')],
+            'topleft': [('a2', 'b1', 'a1')],
+            'bottomright': [('i8', 'h9', 'i9')],
+            'bottomleft': [('h1', 'i2', 'i1')]
+        }
 
-                            for g in seq:
-
-                                if self.get_square_occupant(dest) == 'BLACK':
-
-                                    if g != 'B' and g != '.':
-                                        self.set_square_occupant(sqr)
-                                        self.inc_red_captured()
-                                        row = chr(ord(row) - 1)
-                                        sqr = row + index
-
-                                elif self.get_square_occupant(dest) == 'RED':
-
-                                    if g != 'R' and g != '.':
-                                        self.set_square_occupant(sqr)
-                                        self.inc_black_captured()
-                                        row = chr(ord(row) - 1)
-                                        sqr = row + index
-
-    def _check_down_captures(self, dest):
-        if self.get_square_occupant(dest) == 'BLACK':
-            capture_seq = [['R', 'B'],
-                           ['R', 'R', 'B'],
-                           ['R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'B'],
-                           ['R', 'R', 'R', 'R', 'R', 'R', 'R', 'B']
-                           ]
-        elif self.get_square_occupant(dest) == 'RED':
-            capture_seq = [['B', 'R'],
-                           ['B', 'B', 'R'],
-                           ['B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'R'],
-                           ['B', 'B', 'B', 'B', 'B', 'B', 'B', 'R']
-                           ]
-        for i in self._board:
-            if i[0] == dest[0]:
-                segment = [i[int(dest[1])] for i in self._board if i[0] > dest[0]]
-                seq = []
-                for k in segment:
-                    seq.append(k)
-                    for j in capture_seq:
-                        if seq == j:
-                            row = chr(ord(dest[0]) + 1)
-                            index = dest[1]
-                            sqr = row + index
-                            for g in seq:
-
-                                if self.get_square_occupant(dest) == 'BLACK':
-                                    if g != 'B' and g != '.':
-                                        self.set_square_occupant(sqr)
-                                        self.inc_red_captured()
-                                        row = chr(ord(row) + 1)
-                                        sqr = row + index
-
-                                elif self.get_square_occupant(dest) == 'RED':
-                                    if g != 'R' and g != '.':
-                                        self.set_square_occupant(sqr)
-                                        self.inc_black_captured()
-                                        row = chr(ord(row) + 1)
-                                        sqr = row + index
-
-    def _check_topright(self, dest):
-        if self.get_square_occupant(dest) == 'RED':
-            if dest == 'a8' or dest == 'b9':
-                if self.get_square_occupant('a8') == 'RED' and self.get_square_occupant('b9') == 'RED':
-                    if self.get_square_occupant('a9') == 'BLACK':
-                        self.set_square_occupant('a9')
-                        self.inc_black_captured()
-        elif self.get_square_occupant(dest) == 'BLACK':
-            if dest == 'a8' or dest == 'b9':
-                if self.get_square_occupant('a8') == 'BLACK' and self.get_square_occupant('b9') == 'BLACK':
-                    if self.get_square_occupant('a9') == 'RED':
-                        self.set_square_occupant('a9')
-                        self.inc_red_captured()
-
-    def _check_topleft(self, dest):
-        if self.get_square_occupant(dest) == 'RED':
-            if dest == 'b1' or dest == 'a2':
-                if self.get_square_occupant('b1') == 'RED' and self.get_square_occupant('a2') == 'RED':
-                    if self.get_square_occupant('a1') == 'BLACK':
-                        self.set_square_occupant('a1')
-                        self.inc_black_captured()
-        elif self.get_square_occupant(dest) == 'BLACK':
-            if dest == 'b1' or dest == 'a2':
-                if self.get_square_occupant('a2') == 'BLACK' and self.get_square_occupant('b1') == 'BLACK':
-                    if self.get_square_occupant('a1') == 'RED':
-                        self.set_square_occupant('a1')
-                        self.inc_red_captured()
-
-    def _check_bottomleft(self, dest):
-        if self.get_square_occupant(dest) == 'RED':
-            if dest == 'h1' or dest == 'i2':
-                if self.get_square_occupant('h1') == 'RED' and self.get_square_occupant('i2') == 'RED':
-                    if self.get_square_occupant('i1') == 'BLACK':
-                        self.set_square_occupant('i1')
-                        self.inc_black_captured()
-        elif self.get_square_occupant(dest) == 'BLACK':
-            if dest == 'h1' or dest == 'i2':
-                if self.get_square_occupant('h1') == 'BLACK' and self.get_square_occupant('i2') == 'BLACK':
-                    if self.get_square_occupant('i1') == 'RED':
-                        self.set_square_occupant('i1')
-                        self.inc_red_captured()
-
-    def _check_bottomright(self, dest):
-        if self.get_square_occupant(dest) == 'RED':
-            if dest == 'i8' or dest == 'h9':
-                if self.get_square_occupant('i8') == 'RED' and self.get_square_occupant('h9') == 'RED':
-                    if self.get_square_occupant('i9') == 'BLACK':
-                        self.set_square_occupant('i9')
-                        self.inc_black_captured()
-        elif self.get_square_occupant(dest) == 'BLACK':
-            if dest == 'i8' or dest == 'h9':
-                if self.get_square_occupant('i8') == 'BLACK' and self.get_square_occupant('h9') == 'BLACK':
-                    if self.get_square_occupant('i9') == 'RED':
-                        self.set_square_occupant('i9')
-                        self.inc_red_captured()
+        for corner, positions in corners.items():
+            if dest in [positions[0][0], positions[0][1]]:
+                # Check the corner sequence
+                if (self.get_square_occupant(positions[0][0]) == occupant and
+                    self.get_square_occupant(positions[0][1]) == occupant and
+                    self.get_square_occupant(positions[0][2]) == opponent):
+                    # Capture the opponent piece
+                    self.set_square_occupant(positions[0][2])
+                    captured_count_increment()
 
 
     def make_move(self, origin, dest):
 
-        if origin == dest:
-            return False
+        self._move_piece(origin, dest)
 
-        if self.get_game_state() == 'BLACK_WON' or self.get_game_state() == 'RED_WON':
-            return False
+        # Check left capture
+        self.check_captures(dest, direction=(0, -1))
 
-        if self.get_active_player() != self.get_square_occupant(origin):
-            return False
+        # Check right capture
+        self.check_captures(dest, direction=(0, 1))
 
-        if self.get_square_occupant(origin) == '.':
-            return False
+        # Check upward capture
+        self.check_captures(dest, direction=(-1, 0))
 
-        if not (self._is_vertical(origin, dest) or self._is_horizontal(origin, dest)):
-            return False
+        # Check downward capture
+        self.check_captures(dest, direction=(1, 0))
 
-        if self.is_path_clear(origin, dest):
-            self._move_piece(origin, dest)
-            self._check_lhs_captures(dest)
-            self._check_rhs_captures(dest)
-            self._check_up_captures(dest)
-            self._check_down_captures(dest)
-            self._check_topright(dest)
-            if dest in ['a2', 'b1', 'a8', 'b9', 'h9', 'i8', 'h1', 'i2']:
-                self._check_topright(dest)
-                self._check_topleft(dest)
-                self._check_bottomleft(dest)
-                self._check_bottomright(dest)
-            if self.get_num_of_red_captured() >= 8:
-                self.set_game_state('BLACK_WON')
-            if self.get_num_of_black_captured() >= 8:
-                self.set_game_state('RED_WON')
+        self.check_corner_captures(dest)
 
-            self.set_turn()
+        if self.get_num_of_black_captured() >= 8:
+            self.set_game_state("RED WINS:GAME OVER")
+            print(self.get_game_state())
+        
+        elif self.get_num_of_red_captured() >= 8:
+            self.set_game_state("BLACK WINS:GAME OVER")
+            print(self.get_game_state())
 
-            return True
+        self.set_turn()
+
+        
+
+        return True

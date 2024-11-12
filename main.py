@@ -4,9 +4,17 @@ from HasamiShogiGame import ShogiGame
 def main():
 
     game = ShogiGame()
-    game._move_piece("e1", "c1")
-    game.show_board()
+    
 
+    game.get_square_occupant("a2")
+    game.inc_red_captured()
+    game.make_move("i1", "b1")
+    game.make_move("i2", "a2")
+
+    print(game.get_num_of_red_captured())
+
+
+    game.show_board()
 
 
 
